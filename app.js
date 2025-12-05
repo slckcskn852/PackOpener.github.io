@@ -1,5 +1,5 @@
 // TCG Pack Opener - Main Application
-// Supports MTG, Pokemon, Yu-Gi-Oh, One Piece
+// Supports MTG and Yu-Gi-Oh
 
 class TCGPackOpener {
     constructor() {
@@ -28,17 +28,6 @@ class TCGPackOpener {
                     collector: { name: 'Collector Booster', count: 15, description: 'Premium foil cards' }
                 }
             },
-            pokemon: {
-                name: "Pokémon TCG",
-                theme: "pokemon-theme",
-                api: {
-                    sets: 'https://api.pokemontcg.io/v2/sets',
-                    cards: 'https://api.pokemontcg.io/v2/cards'
-                },
-                packTypes: {
-                    standard: { name: 'Booster Pack', count: 10, description: '10 cards including 1 rare' }
-                }
-            },
             yugioh: {
                 name: "Yu-Gi-Oh!",
                 theme: "yugioh-theme",
@@ -48,18 +37,6 @@ class TCGPackOpener {
                 },
                 packTypes: {
                     standard: { name: 'Booster Pack', count: 9, description: '9 cards per pack' }
-                }
-            },
-            onepiece: {
-                name: "One Piece TCG",
-                theme: "onepiece-theme",
-                api: {
-                    // Mock API for now
-                    sets: 'mock',
-                    cards: 'mock'
-                },
-                packTypes: {
-                    standard: { name: 'Booster Pack', count: 12, description: '12 cards per pack' }
                 }
             }
         };
@@ -239,24 +216,6 @@ class TCGPackOpener {
                     !set.digital
                 ).sort((a, b) => new Date(b.released_at) - new Date(a.released_at));
                 
-            } else if (this.currentGame === 'pokemon') {
-                    try {
-                        const response = await fetch(this.gameConfigs.pokemon.api.sets + '?orderBy=-releaseDate');
-                        if (!response.ok) throw new Error('Pokemon sets fetch failed');
-                        const data = await response.json();
-                        sets = data.data;
-                    } catch (err) {
-                        console.warn('Pokemon API failed, using fallback sets');
-                        // Minimal fallback so the UI still works without the API
-                        sets = [
-                            { id: 'sv8', name: 'Stellar Crown', releaseDate: '2024/11/08', total: 190, images: { symbol: 'https://images.pokemontcg.io/sv8/symbol.png', logo: 'https://images.pokemontcg.io/sv8/logo.png' } },
-                            { id: 'sv7', name: 'Surging Sparks', releaseDate: '2024/09/13', total: 182, images: { symbol: 'https://images.pokemontcg.io/sv7/symbol.png', logo: 'https://images.pokemontcg.io/sv7/logo.png' } },
-                            { id: 'sv6', name: 'Twilight Masquerade', releaseDate: '2024/05/24', total: 226, images: { symbol: 'https://images.pokemontcg.io/sv6/symbol.png', logo: 'https://images.pokemontcg.io/sv6/logo.png' } },
-                            { id: 'sv5', name: 'Temporal Forces', releaseDate: '2024/03/22', total: 218, images: { symbol: 'https://images.pokemontcg.io/sv5/symbol.png', logo: 'https://images.pokemontcg.io/sv5/logo.png' } },
-                            { id: 'sv4', name: 'Paradox Rift', releaseDate: '2023/11/03', total: 266, images: { symbol: 'https://images.pokemontcg.io/sv4/symbol.png', logo: 'https://images.pokemontcg.io/sv4/logo.png' } }
-                        ];
-                    }
-                
             } else if (this.currentGame === 'yugioh') {
                 const response = await fetch(this.gameConfigs.yugioh.api.sets);
                 const data = await response.json();
@@ -265,15 +224,6 @@ class TCGPackOpener {
                     const dateB = b.tcg_date ? new Date(b.tcg_date) : new Date(0);
                     return dateB - dateA;
                 });
-            } else if (this.currentGame === 'onepiece') {
-                // Mock Data for One Piece
-                sets = [
-                    { code: 'OP05', name: 'Awakening of the New Era', released_at: '2023-12-08', card_count: 126, icon: '☠️' },
-                    { code: 'OP04', name: 'Kingdoms of Intrigue', released_at: '2023-09-22', card_count: 124, icon: '☠️' },
-                    { code: 'OP03', name: 'Pillars of Strength', released_at: '2023-06-30', card_count: 127, icon: '☠️' },
-                    { code: 'OP02', name: 'Paramount War', released_at: '2023-03-10', card_count: 121, icon: '☠️' },
-                    { code: 'OP01', name: 'Romance Dawn', released_at: '2022-12-02', card_count: 121, icon: '☠️' }
-                ];
             }
             
             this.setsData = sets;
@@ -294,24 +244,13 @@ class TCGPackOpener {
                 date = set.released_at;
                 count = set.card_count;
                 icon = `<img src="${set.icon_svg_uri}" alt="${name} icon" onerror="this.style.display='none'">`;
-            } else if (this.currentGame === 'pokemon') {
-                code = set.id;
-                name = set.name;
-                date = set.releaseDate;
-                count = set.total;
-                icon = `<img src="${set.images.symbol}" alt="${name} icon" onerror="this.style.display='none'">`;
-            } else if (this.currentGame === 'yugioh') {
+            } else {
+                // yugioh
                 code = set.set_code;
                 name = set.set_name;
                 date = set.tcg_date;
                 count = set.num_of_cards;
                 icon = '<span style="font-size: 2rem;">🔮</span>';
-            } else if (this.currentGame === 'onepiece') {
-                code = set.code;
-                name = set.name;
-                date = set.released_at;
-                count = set.card_count;
-                icon = `<span style="font-size: 2rem;">${set.icon}</span>`;
             }
 
             return `
@@ -338,12 +277,8 @@ class TCGPackOpener {
             let name, code;
             if (this.currentGame === 'mtg') {
                 name = set.name; code = set.code;
-            } else if (this.currentGame === 'pokemon') {
-                name = set.name; code = set.id;
-            } else if (this.currentGame === 'yugioh') {
+            } else {
                 name = set.set_name; code = set.set_code;
-            } else if (this.currentGame === 'onepiece') {
-                name = set.name; code = set.code;
             }
             return name.toLowerCase().includes(query.toLowerCase()) || code.toLowerCase().includes(query.toLowerCase());
         });
@@ -353,12 +288,8 @@ class TCGPackOpener {
     async selectSet(setCode) {
         if (this.currentGame === 'mtg') {
             this.currentSet = this.setsData.find(set => set.code === setCode);
-        } else if (this.currentGame === 'pokemon') {
-            this.currentSet = this.setsData.find(set => set.id === setCode);
-        } else if (this.currentGame === 'yugioh') {
+        } else {
             this.currentSet = this.setsData.find(set => set.set_code === setCode);
-        } else if (this.currentGame === 'onepiece') {
-            this.currentSet = this.setsData.find(set => set.code === setCode);
         }
         
         if (!this.currentSet) return;
@@ -367,12 +298,8 @@ class TCGPackOpener {
         let name, date;
         if (this.currentGame === 'mtg') {
             name = this.currentSet.name; date = this.currentSet.released_at;
-        } else if (this.currentGame === 'pokemon') {
-            name = this.currentSet.name; date = this.currentSet.releaseDate;
-        } else if (this.currentGame === 'yugioh') {
+        } else {
             name = this.currentSet.set_name; date = this.currentSet.tcg_date;
-        } else if (this.currentGame === 'onepiece') {
-            name = this.currentSet.name; date = this.currentSet.released_at;
         }
 
         this.currentSetName.textContent = name;
