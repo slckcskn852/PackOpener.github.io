@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG Pack Opener</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>MTG Pack Opener</h1>
+            <p class="subtitle">Experience the thrill of opening Magic: The Gathering booster packs</p>
+        </header>
+
+        <!-- Set Selection -->
+        <div class="set-selection" id="setSelection">
+            <h2>Choose Your Set</h2>
+            <div class="search-container">
+                <input type="text" id="setSearch" placeholder="Search for a set..." autocomplete="off">
+            </div>
+            <div class="sets-grid" id="setsGrid">
+                <!-- Sets will be populated by JavaScript -->
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Loading sets...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pack Opening Area -->
+        <div class="pack-area" id="packArea" style="display: none;">
+            <button class="back-button" id="backButton">← Back to Sets</button>
+            <div class="set-info" id="setInfo">
+                <h2 id="currentSetName">Set Name</h2>
+                <p id="currentSetInfo">Release Info</p>
+            </div>
+            
+            <!-- Pack Type Selection -->
+            <div class="pack-type-selection" id="packTypeSelection">
+                <button class="pack-type-btn active" data-type="play">Play Booster</button>
+                <button class="pack-type-btn" data-type="draft">Draft Booster</button>
+                <button class="pack-type-btn" data-type="collector">Collector Booster</button>
+            </div>
+
+            <div class="pack-container" id="packContainer">
+                <div class="pack" id="pack">
+                    <!-- Pack wrapper (the foil wrapper) -->
+                    <div class="pack-wrapper" id="packWrapper">
+                        <!-- Tear zone at top of pack -->
+                        <div class="tear-zone" id="tearZone">
+                            <div class="tear-progress-bar" id="tearProgressBar"></div>
+                            <div class="tear-strip" id="tearStrip">
+                                <div class="tear-strip-pulled" id="tearStripPulled"></div>
+                            </div>
+                            <div class="tear-instruction">
+                                <span>Drag to Open</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Pack front face -->
+                        <div class="pack-face pack-front" id="packFront">
+                            <!-- Retail pack image background -->
+                            <div class="pack-retail-bg" id="packRetailBg"></div>
+                            
+                            <!-- Foil/holographic overlay -->
+                            <div class="pack-foil-overlay"></div>
+                            
+                            <!-- Set artwork area -->
+                            <div class="pack-artwork-area">
+                                <div class="pack-set-logo" id="packSetLogo"></div>
+                                <div class="pack-set-name" id="packSetName"></div>
+                            </div>
+                            
+                            <!-- MTG Branding -->
+                            <div class="pack-branding">
+                                <div class="mtg-logo">MAGIC: THE GATHERING</div>
+                                <div class="pack-type-label" id="packTypeLabel">PLAY BOOSTER</div>
+                            </div>
+                            
+                            <!-- Card count indicator -->
+                            <div class="pack-card-count" id="packCardCount">14 CARDS</div>
+                            
+                            <!-- Shine effect -->
+                            <div class="pack-shine"></div>
+                        </div>
+                        
+                        <!-- Pack back face -->
+                        <div class="pack-face pack-back">
+                            <div class="pack-back-design">
+                                <div class="pack-back-logo">MTG</div>
+                                <div class="pack-back-text">TRADING CARD GAME</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="instructions" id="instructions">
+                <p id="instructionText">Drag the tear strip from left to right to open the pack!</p>
+            </div>
+        </div>
+
+        <!-- Cards Reveal Area -->
+        <div class="cards-area" id="cardsArea" style="display: none;">
+            <div class="cards-header">
+                <button class="back-button" id="backToPackButton">← Open Another Pack</button>
+                <h2>Your Pack Contents</h2>
+            </div>
+            
+            <!-- Grid card display -->
+            <div class="cards-grid" id="cardsGrid">
+                <!-- Cards will be populated by JavaScript -->
+            </div>
+            
+            <!-- Pack summary -->
+            <div class="pack-summary" id="packSummary">
+                <div class="rarity-breakdown" id="rarityBreakdown"></div>
+            </div>
+            
+            <button class="open-another-btn" id="openAnotherBtn">Open Another Pack</button>
+        </div>
+
+        <!-- Card Modal -->
+        <div class="card-modal" id="cardModal">
+            <div class="modal-overlay" id="modalOverlay"></div>
+            <div class="modal-content" id="modalContent">
+                <button class="modal-close" id="modalClose">×</button>
+                <img class="modal-card-image" id="modalCardImage" src="" alt="">
+                <div class="modal-card-info" id="modalCardInfo"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
