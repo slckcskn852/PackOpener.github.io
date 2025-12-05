@@ -1,8 +1,9 @@
-// MTG Pack Opener - Main Application
-// Uses Scryfall API for card data
+// TCG Pack Opener - Main Application
+// Supports MTG, Pokemon, Yu-Gi-Oh, One Piece
 
-class MTGPackOpener {
+class TCGPackOpener {
     constructor() {
+        this.currentGame = null;
         this.setsData = [];
         this.currentSet = null;
         this.currentCards = [];
@@ -12,22 +13,54 @@ class MTGPackOpener {
         this.packType = 'play';
         this.packState = 'initial'; // initial, tearing, torn
         
-        // Pack configurations based on MTG booster rules
-        this.packConfigs = {
-            play: {
-                name: 'Play Booster',
-                cardCount: 14,
-                description: '14 cards including 1 rare/mythic, 3 uncommons, 6 commons, and special slots'
+        // Game Configurations
+        this.gameConfigs = {
+            mtg: {
+                name: "Magic: The Gathering",
+                theme: "mtg-theme",
+                api: {
+                    sets: 'https://api.scryfall.com/sets',
+                    cards: 'https://api.scryfall.com/cards/search'
+                },
+                packTypes: {
+                    play: { name: 'Play Booster', count: 14, description: '14 cards including 1 rare/mythic' },
+                    draft: { name: 'Draft Booster', count: 15, description: '15 cards for drafting' },
+                    collector: { name: 'Collector Booster', count: 15, description: 'Premium foil cards' }
+                }
             },
-            draft: {
-                name: 'Draft Booster',
-                cardCount: 15,
-                description: '15 cards including 1 rare/mythic, 3 uncommons, 10 commons, and 1 land'
+            pokemon: {
+                name: "Pokémon TCG",
+                theme: "pokemon-theme",
+                api: {
+                    sets: 'https://api.pokemontcg.io/v2/sets',
+                    cards: 'https://api.pokemontcg.io/v2/cards'
+                },
+                packTypes: {
+                    standard: { name: 'Booster Pack', count: 10, description: '10 cards including 1 rare' }
+                }
             },
-            collector: {
-                name: 'Collector Booster',
-                cardCount: 15,
-                description: '15 cards with guaranteed foils, extended art, and special treatments'
+            yugioh: {
+                name: "Yu-Gi-Oh!",
+                theme: "yugioh-theme",
+                api: {
+                    sets: 'https://db.ygoprodeck.com/api/v7/cardsets.php',
+                    cards: 'https://db.ygoprodeck.com/api/v7/cardinfo.php'
+                },
+                packTypes: {
+                    standard: { name: 'Booster Pack', count: 9, description: '9 cards per pack' }
+                }
+            },
+            onepiece: {
+                name: "One Piece TCG",
+                theme: "onepiece-theme",
+                api: {
+                    // Mock API for now
+                    sets: 'mock',
+                    cards: 'mock'
+                },
+                packTypes: {
+                    standard: { name: 'Booster Pack', count: 12, description: '12 cards per pack' }
+                }
             }
         };
         
@@ -37,18 +70,29 @@ class MTGPackOpener {
     async init() {
         this.cacheElements();
         this.bindEvents();
-        await this.loadSets();
+        // Start at game selection, so no initial loadSets call
     }
 
     cacheElements() {
+        // App Container
+        this.appContainer = document.getElementById('appContainer');
+        this.headerTitle = document.getElementById('headerTitle');
+        this.headerSubtitle = document.getElementById('headerSubtitle');
+
         // Sections
+        this.gameSelection = document.getElementById('gameSelection');
         this.setSelection = document.getElementById('setSelection');
         this.packArea = document.getElementById('packArea');
         this.cardsArea = document.getElementById('cardsArea');
         
+        // Game Selection
+        this.gamesGrid = document.getElementById('gamesGrid');
+        this.gameCards = document.querySelectorAll('.game-card');
+
         // Set selection
         this.setsGrid = document.getElementById('setsGrid');
         this.setSearch = document.getElementById('setSearch');
+        this.setSelectionTitle = document.getElementById('setSelectionTitle');
         
         // Pack area
         this.pack = document.getElementById('pack');
@@ -60,10 +104,17 @@ class MTGPackOpener {
         this.packSetName = document.getElementById('packSetName');
         this.packTypeLabel = document.getElementById('packTypeLabel');
         this.packCardCount = document.getElementById('packCardCount');
+        this.gameBrandLogo = document.getElementById('gameBrandLogo');
+        this.packBackLogo = document.getElementById('packBackLogo');
+        this.packBackText = document.getElementById('packBackText');
+        
         this.currentSetName = document.getElementById('currentSetName');
         this.currentSetInfo = document.getElementById('currentSetInfo');
         this.instructions = document.getElementById('instructions');
         this.instructionText = document.getElementById('instructionText');
+        
+        // Pack Type Selection Container
+        this.packTypeSelection = document.getElementById('packTypeSelection');
         
         // Tear zone elements
         this.tearZone = document.getElementById('tearZone');
@@ -71,14 +122,12 @@ class MTGPackOpener {
         this.tearStripPulled = document.getElementById('tearStripPulled');
         this.tearProgressBar = document.getElementById('tearProgressBar');
         
-        // Pack type buttons
-        this.packTypeBtns = document.querySelectorAll('.pack-type-btn');
-        
         // Cards area
         this.cardsGrid = document.getElementById('cardsGrid');
         this.rarityBreakdown = document.getElementById('rarityBreakdown');
         
         // Buttons
+        this.backToGamesButton = document.getElementById('backToGamesButton');
         this.backButton = document.getElementById('backButton');
         this.backToPackButton = document.getElementById('backToPackButton');
         this.openAnotherBtn = document.getElementById('openAnotherBtn');
@@ -92,13 +141,13 @@ class MTGPackOpener {
     }
 
     bindEvents() {
+        // Game Selection
+        this.gameCards.forEach(card => {
+            card.addEventListener('click', () => this.selectGame(card.dataset.game));
+        });
+
         // Search
         this.setSearch.addEventListener('input', (e) => this.filterSets(e.target.value));
-        
-        // Pack type selection
-        this.packTypeBtns.forEach(btn => {
-            btn.addEventListener('click', () => this.selectPackType(btn.dataset.type));
-        });
         
         // Tear zone drag events
         this.tearZone.addEventListener('mousedown', (e) => this.startTear(e));
@@ -111,6 +160,7 @@ class MTGPackOpener {
         document.addEventListener('touchend', () => this.endTear());
         
         // Navigation buttons
+        this.backToGamesButton.addEventListener('click', () => this.showGameSelection());
         this.backButton.addEventListener('click', () => this.showSetSelection());
         this.backToPackButton.addEventListener('click', () => this.showPackArea());
         this.openAnotherBtn.addEventListener('click', () => this.showPackArea());
@@ -126,26 +176,107 @@ class MTGPackOpener {
         });
     }
 
+    selectGame(gameId) {
+        this.currentGame = gameId;
+        const config = this.gameConfigs[gameId];
+        
+        // Apply Theme
+        this.appContainer.className = 'app-container'; // Reset
+        this.appContainer.classList.add(config.theme);
+        
+        // Update Header
+        this.headerTitle.textContent = config.name;
+        this.headerSubtitle.textContent = `Select a set to start opening ${config.name} packs`;
+        
+        // Update Set Selection Title
+        this.setSelectionTitle.textContent = `Choose Your ${config.name} Set`;
+        
+        // Load Sets
+        this.loadSets();
+        
+        // Show Set Selection
+        this.showSetSelection();
+    }
+
+    showGameSelection() {
+        this.gameSelection.style.display = 'block';
+        this.setSelection.style.display = 'none';
+        this.packArea.style.display = 'none';
+        this.cardsArea.style.display = 'none';
+        
+        // Reset Header
+        this.headerTitle.textContent = 'TCG Pack Opener';
+        this.headerSubtitle.textContent = 'Choose your game and experience the thrill of opening packs';
+        this.appContainer.className = 'app-container';
+    }
+
     selectPackType(type) {
         this.packType = type;
-        this.packTypeBtns.forEach(btn => {
+        const btns = this.packTypeSelection.querySelectorAll('.pack-type-btn');
+        btns.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.type === type);
         });
         this.updatePackDisplay();
     }
 
     async loadSets() {
+        this.setsGrid.innerHTML = `
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Loading ${this.gameConfigs[this.currentGame].name} sets...</p>
+            </div>
+        `;
+
         try {
-            const response = await fetch('https://api.scryfall.com/sets');
-            const data = await response.json();
+            let sets = [];
             
-            // Filter to only include sets with cards and that are playable
-            this.setsData = data.data.filter(set => 
-                set.card_count > 0 && 
-                ['core', 'expansion', 'draft_innovation', 'masters', 'funny'].includes(set.set_type) &&
-                !set.digital
-            ).sort((a, b) => new Date(b.released_at) - new Date(a.released_at));
+            if (this.currentGame === 'mtg') {
+                const response = await fetch(this.gameConfigs.mtg.api.sets);
+                const data = await response.json();
+                sets = data.data.filter(set => 
+                    set.card_count > 0 && 
+                    ['core', 'expansion', 'draft_innovation', 'masters', 'funny'].includes(set.set_type) &&
+                    !set.digital
+                ).sort((a, b) => new Date(b.released_at) - new Date(a.released_at));
+                
+            } else if (this.currentGame === 'pokemon') {
+                    try {
+                        const response = await fetch(this.gameConfigs.pokemon.api.sets + '?orderBy=-releaseDate');
+                        if (!response.ok) throw new Error('Pokemon sets fetch failed');
+                        const data = await response.json();
+                        sets = data.data;
+                    } catch (err) {
+                        console.warn('Pokemon API failed, using fallback sets');
+                        // Minimal fallback so the UI still works without the API
+                        sets = [
+                            { id: 'sv8', name: 'Stellar Crown', releaseDate: '2024/11/08', total: 190, images: { symbol: 'https://images.pokemontcg.io/sv8/symbol.png', logo: 'https://images.pokemontcg.io/sv8/logo.png' } },
+                            { id: 'sv7', name: 'Surging Sparks', releaseDate: '2024/09/13', total: 182, images: { symbol: 'https://images.pokemontcg.io/sv7/symbol.png', logo: 'https://images.pokemontcg.io/sv7/logo.png' } },
+                            { id: 'sv6', name: 'Twilight Masquerade', releaseDate: '2024/05/24', total: 226, images: { symbol: 'https://images.pokemontcg.io/sv6/symbol.png', logo: 'https://images.pokemontcg.io/sv6/logo.png' } },
+                            { id: 'sv5', name: 'Temporal Forces', releaseDate: '2024/03/22', total: 218, images: { symbol: 'https://images.pokemontcg.io/sv5/symbol.png', logo: 'https://images.pokemontcg.io/sv5/logo.png' } },
+                            { id: 'sv4', name: 'Paradox Rift', releaseDate: '2023/11/03', total: 266, images: { symbol: 'https://images.pokemontcg.io/sv4/symbol.png', logo: 'https://images.pokemontcg.io/sv4/logo.png' } }
+                        ];
+                    }
+                
+            } else if (this.currentGame === 'yugioh') {
+                const response = await fetch(this.gameConfigs.yugioh.api.sets);
+                const data = await response.json();
+                sets = data.sort((a, b) => {
+                    const dateA = a.tcg_date ? new Date(a.tcg_date) : new Date(0);
+                    const dateB = b.tcg_date ? new Date(b.tcg_date) : new Date(0);
+                    return dateB - dateA;
+                });
+            } else if (this.currentGame === 'onepiece') {
+                // Mock Data for One Piece
+                sets = [
+                    { code: 'OP05', name: 'Awakening of the New Era', released_at: '2023-12-08', card_count: 126, icon: '☠️' },
+                    { code: 'OP04', name: 'Kingdoms of Intrigue', released_at: '2023-09-22', card_count: 124, icon: '☠️' },
+                    { code: 'OP03', name: 'Pillars of Strength', released_at: '2023-06-30', card_count: 127, icon: '☠️' },
+                    { code: 'OP02', name: 'Paramount War', released_at: '2023-03-10', card_count: 121, icon: '☠️' },
+                    { code: 'OP01', name: 'Romance Dawn', released_at: '2022-12-02', card_count: 121, icon: '☠️' }
+                ];
+            }
             
+            this.setsData = sets;
             this.renderSets(this.setsData);
         } catch (error) {
             console.error('Failed to load sets:', error);
@@ -154,17 +285,47 @@ class MTGPackOpener {
     }
 
     renderSets(sets) {
-        this.setsGrid.innerHTML = sets.map(set => `
-            <div class="set-card" data-set-code="${set.code}">
-                <div class="set-icon">
-                    <img src="${set.icon_svg_uri}" alt="${set.name} icon" onerror="this.style.display='none'">
+        this.setsGrid.innerHTML = sets.map(set => {
+            let code, name, date, count, icon;
+            
+            if (this.currentGame === 'mtg') {
+                code = set.code;
+                name = set.name;
+                date = set.released_at;
+                count = set.card_count;
+                icon = `<img src="${set.icon_svg_uri}" alt="${name} icon" onerror="this.style.display='none'">`;
+            } else if (this.currentGame === 'pokemon') {
+                code = set.id;
+                name = set.name;
+                date = set.releaseDate;
+                count = set.total;
+                icon = `<img src="${set.images.symbol}" alt="${name} icon" onerror="this.style.display='none'">`;
+            } else if (this.currentGame === 'yugioh') {
+                code = set.set_code;
+                name = set.set_name;
+                date = set.tcg_date;
+                count = set.num_of_cards;
+                icon = '<span style="font-size: 2rem;">🔮</span>';
+            } else if (this.currentGame === 'onepiece') {
+                code = set.code;
+                name = set.name;
+                date = set.released_at;
+                count = set.card_count;
+                icon = `<span style="font-size: 2rem;">${set.icon}</span>`;
+            }
+
+            return `
+                <div class="set-card" data-set-code="${code}">
+                    <div class="set-icon">
+                        ${icon}
+                    </div>
+                    <div class="set-details">
+                        <h3>${name}</h3>
+                        <p>${date ? new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date'} • ${count} cards</p>
+                    </div>
                 </div>
-                <div class="set-details">
-                    <h3>${set.name}</h3>
-                    <p>${new Date(set.released_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} • ${set.card_count} cards</p>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
         // Add click handlers
         this.setsGrid.querySelectorAll('.set-card').forEach(card => {
@@ -173,23 +334,51 @@ class MTGPackOpener {
     }
 
     filterSets(query) {
-        const filtered = this.setsData.filter(set => 
-            set.name.toLowerCase().includes(query.toLowerCase()) ||
-            set.code.toLowerCase().includes(query.toLowerCase())
-        );
+        const filtered = this.setsData.filter(set => {
+            let name, code;
+            if (this.currentGame === 'mtg') {
+                name = set.name; code = set.code;
+            } else if (this.currentGame === 'pokemon') {
+                name = set.name; code = set.id;
+            } else if (this.currentGame === 'yugioh') {
+                name = set.set_name; code = set.set_code;
+            } else if (this.currentGame === 'onepiece') {
+                name = set.name; code = set.code;
+            }
+            return name.toLowerCase().includes(query.toLowerCase()) || code.toLowerCase().includes(query.toLowerCase());
+        });
         this.renderSets(filtered);
     }
 
     async selectSet(setCode) {
-        this.currentSet = this.setsData.find(set => set.code === setCode);
+        if (this.currentGame === 'mtg') {
+            this.currentSet = this.setsData.find(set => set.code === setCode);
+        } else if (this.currentGame === 'pokemon') {
+            this.currentSet = this.setsData.find(set => set.id === setCode);
+        } else if (this.currentGame === 'yugioh') {
+            this.currentSet = this.setsData.find(set => set.set_code === setCode);
+        } else if (this.currentGame === 'onepiece') {
+            this.currentSet = this.setsData.find(set => set.code === setCode);
+        }
         
         if (!this.currentSet) return;
         
         // Update UI
-        this.currentSetName.textContent = this.currentSet.name;
-        this.currentSetInfo.textContent = `Released: ${new Date(this.currentSet.released_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+        let name, date;
+        if (this.currentGame === 'mtg') {
+            name = this.currentSet.name; date = this.currentSet.released_at;
+        } else if (this.currentGame === 'pokemon') {
+            name = this.currentSet.name; date = this.currentSet.releaseDate;
+        } else if (this.currentGame === 'yugioh') {
+            name = this.currentSet.set_name; date = this.currentSet.tcg_date;
+        } else if (this.currentGame === 'onepiece') {
+            name = this.currentSet.name; date = this.currentSet.released_at;
+        }
+
+        this.currentSetName.textContent = name;
+        this.currentSetInfo.textContent = `Released: ${date ? new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date'}`;
         
-        // Fetch a card from the set to use as pack artwork
+        // Fetch a card from the set to use as pack artwork (best effort)
         await this.fetchPackArtwork();
         
         this.updatePackDisplay();
@@ -198,41 +387,94 @@ class MTGPackOpener {
     }
 
     async fetchPackArtwork() {
+        this.packArtUrl = null;
         try {
-            // Try to get a mythic or rare card with good art for the pack
-            const query = `set:${this.currentSet.code} (rarity:mythic OR rarity:rare) is:booster`;
-            const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=random`);
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data.data && data.data.length > 0) {
-                    // Find a card with art
-                    const cardWithArt = data.data.find(card => card.image_uris?.art_crop);
-                    if (cardWithArt) {
-                        this.packArtUrl = cardWithArt.image_uris.art_crop;
-                        return;
+            if (this.currentGame === 'mtg') {
+                const query = `set:${this.currentSet.code} (rarity:mythic OR rarity:rare) is:booster`;
+                const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=random`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data?.length > 0) {
+                        const card = data.data.find(c => c.image_uris?.art_crop);
+                        if (card) this.packArtUrl = card.image_uris.art_crop;
+                    }
+                }
+            } else if (this.currentGame === 'pokemon') {
+                // Try a lightweight request; if blocked, fall back to set logo
+                const response = await fetch(`${this.gameConfigs.pokemon.api.cards}?q=set.id:${this.currentSet.id}&pageSize=1&page=${Math.floor(Math.random() * 5) + 1}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data?.length > 0 && data.data[0].images?.large) {
+                        this.packArtUrl = data.data[0].images.large;
+                    }
+                }
+                if (!this.packArtUrl && this.currentSet.images?.logo) {
+                    this.packArtUrl = this.currentSet.images.logo;
+                }
+            } else if (this.currentGame === 'yugioh') {
+                const response = await fetch(`${this.gameConfigs.yugioh.api.cards}?cardset=${encodeURIComponent(this.currentSet.set_name)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data?.length > 0) {
+                        const randomCard = data.data[Math.floor(Math.random() * data.data.length)];
+                        this.packArtUrl = randomCard.card_images[0].image_url_cropped || randomCard.card_images[0].image_url;
                     }
                 }
             }
         } catch (error) {
-            console.log('Could not fetch pack artwork');
+            console.log('Could not fetch pack artwork', error);
         }
-        this.packArtUrl = null;
     }
 
     updatePackDisplay() {
         if (!this.currentSet) return;
         
-        const config = this.packConfigs[this.packType];
+        const gameConfig = this.gameConfigs[this.currentGame];
         
+        // Ensure pack type is valid for this game
+        if (!gameConfig.packTypes[this.packType]) {
+            this.packType = Object.keys(gameConfig.packTypes)[0];
+        }
+        
+        const packConfig = gameConfig.packTypes[this.packType];
+        
+        // Render Pack Type Buttons
+        this.packTypeSelection.innerHTML = Object.entries(gameConfig.packTypes).map(([type, config]) => `
+            <button class="pack-type-btn ${type === this.packType ? 'active' : ''}" data-type="${type}">
+                ${config.name}
+            </button>
+        `).join('');
+        
+        // Re-bind button events
+        this.packTypeSelection.querySelectorAll('.pack-type-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.selectPackType(btn.dataset.type));
+        });
+
         // Update pack visuals
-        this.packSetLogo.innerHTML = `<img src="${this.currentSet.icon_svg_uri}" alt="${this.currentSet.name}">`;
-        this.packSetName.textContent = this.currentSet.name;
-        this.packTypeLabel.textContent = config.name.toUpperCase();
-        this.packCardCount.textContent = `${config.cardCount} CARDS`;
+        let logoHtml = '';
+        if (this.currentGame === 'mtg') {
+            logoHtml = `<img src="${this.currentSet.icon_svg_uri}" alt="${this.currentSet.name}">`;
+        } else if (this.currentGame === 'pokemon') {
+            logoHtml = `<img src="${this.currentSet.images.symbol}" alt="${this.currentSet.name}">`;
+        } else if (this.currentGame === 'yugioh') {
+            logoHtml = '<span style="font-size: 3rem;">🔮</span>';
+        } else if (this.currentGame === 'onepiece') {
+            logoHtml = `<span style="font-size: 3rem;">${this.currentSet.icon}</span>`;
+        }
+
+        this.packSetLogo.innerHTML = logoHtml;
+        this.packSetName.textContent = this.currentSetName.textContent;
+        this.packTypeLabel.textContent = packConfig.name.toUpperCase();
+        this.packCardCount.textContent = `${packConfig.count} CARDS`;
+        
+        // Update Branding
+        this.gameBrandLogo.textContent = gameConfig.name.toUpperCase();
+        this.packBackLogo.textContent = this.currentGame === 'mtg' ? 'MTG' : 
+                                      this.currentGame === 'pokemon' ? 'POKÉMON' : 
+                                      this.currentGame === 'yugioh' ? 'YU-GI-OH!' : 'ONE PIECE';
         
         // Remove previous pack type classes
-        this.packFront.classList.remove('pack-play', 'pack-draft', 'pack-collector');
+        this.packFront.className = 'pack-face pack-front'; // Reset
         this.packFront.classList.add(`pack-${this.packType}`);
         
         // Set pack colors based on pack type and set
@@ -250,46 +492,37 @@ class MTGPackOpener {
 
     getPackColors(set, packType) {
         // Generate base hue from set name
-        const hash = set.name.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
+        const name = set.name || set.set_name || '';
+        const hash = name.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
         const baseHue = hash % 360;
         
-        switch (packType) {
-            case 'draft':
-                // Draft boosters - cooler blue/purple tones with silver accents
-                return {
-                    gradient: `linear-gradient(180deg, 
-                        hsl(220, 50%, 45%) 0%, 
-                        hsl(240, 55%, 35%) 30%,
-                        hsl(260, 60%, 25%) 60%,
-                        hsl(270, 65%, 18%) 100%)`
-                };
-            case 'collector':
-                // Collector boosters - premium gold/black with shimmer
-                return {
-                    gradient: `linear-gradient(180deg, 
-                        hsl(45, 80%, 45%) 0%, 
-                        hsl(35, 70%, 30%) 25%,
-                        hsl(25, 60%, 20%) 50%,
-                        hsl(0, 0%, 10%) 100%)`
-                };
-            default:
-                // Play boosters - set-based colors
-                return {
-                    gradient: `linear-gradient(180deg, 
-                        hsl(${baseHue}, 55%, 40%) 0%, 
-                        hsl(${(baseHue + 25) % 360}, 65%, 28%) 50%, 
-                        hsl(${(baseHue + 50) % 360}, 75%, 18%) 100%)`
-                };
+        if (this.currentGame === 'mtg') {
+            switch (packType) {
+                case 'draft':
+                    return { gradient: `linear-gradient(180deg, hsl(220, 50%, 45%) 0%, hsl(240, 55%, 35%) 30%, hsl(260, 60%, 25%) 60%, hsl(270, 65%, 18%) 100%)` };
+                case 'collector':
+                    return { gradient: `linear-gradient(180deg, hsl(45, 80%, 45%) 0%, hsl(35, 70%, 30%) 25%, hsl(25, 60%, 20%) 50%, hsl(0, 0%, 10%) 100%)` };
+                default:
+                    return { gradient: `linear-gradient(180deg, hsl(${baseHue}, 55%, 40%) 0%, hsl(${(baseHue + 25) % 360}, 65%, 28%) 50%, hsl(${(baseHue + 50) % 360}, 75%, 18%) 100%)` };
+            }
+        } else if (this.currentGame === 'pokemon') {
+            return { gradient: `linear-gradient(180deg, hsl(${baseHue}, 70%, 50%) 0%, hsl(${(baseHue + 40) % 360}, 80%, 40%) 100%)` };
+        } else if (this.currentGame === 'yugioh') {
+            return { gradient: `linear-gradient(180deg, #b85c00 0%, #8a4500 50%, #5c2e00 100%)` }; // Classic booster color
+        } else {
+            return { gradient: `linear-gradient(180deg, hsl(${baseHue}, 60%, 40%) 0%, hsl(${(baseHue + 30) % 360}, 70%, 30%) 100%)` };
         }
     }
 
     showSetSelection() {
+        this.gameSelection.style.display = 'none';
         this.setSelection.style.display = 'block';
         this.packArea.style.display = 'none';
         this.cardsArea.style.display = 'none';
     }
 
     showPackArea() {
+        this.gameSelection.style.display = 'none';
         this.setSelection.style.display = 'none';
         this.packArea.style.display = 'flex';
         this.cardsArea.style.display = 'none';
@@ -297,6 +530,7 @@ class MTGPackOpener {
     }
 
     showCardsArea() {
+        this.gameSelection.style.display = 'none';
         this.setSelection.style.display = 'none';
         this.packArea.style.display = 'none';
         this.cardsArea.style.display = 'block';
@@ -526,119 +760,157 @@ class MTGPackOpener {
 
     async loadCards() {
         try {
-            // Fetch cards from the set using Scryfall's search API
-            const query = `set:${this.currentSet.code} is:booster`;
-            const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=random`);
+            let cards = [];
             
-            if (!response.ok) {
-                // Fallback to all cards in set
-                const fallbackResponse = await fetch(`https://api.scryfall.com/cards/search?q=set:${this.currentSet.code}&order=random`);
-                const fallbackData = await fallbackResponse.json();
-                this.currentCards = this.simulateBooster(fallbackData.data || []);
-                return;
+            if (this.currentGame === 'mtg') {
+                const query = `set:${this.currentSet.code} is:booster`;
+                const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=random`);
+                if (response.ok) {
+                    const data = await response.json();
+                    cards = data.data;
+                } else {
+                    // Fallback
+                    const fallbackResponse = await fetch(`https://api.scryfall.com/cards/search?q=set:${this.currentSet.code}&order=random`);
+                    const fallbackData = await fallbackResponse.json();
+                    cards = fallbackData.data;
+                }
+            } else if (this.currentGame === 'pokemon') {
+                const response = await fetch(`${this.gameConfigs.pokemon.api.cards}?q=set.id:${this.currentSet.id}`);
+                const data = await response.json();
+                cards = data.data;
+            } else if (this.currentGame === 'yugioh') {
+                const response = await fetch(`${this.gameConfigs.yugioh.api.cards}?cardset=${encodeURIComponent(this.currentSet.set_name)}`);
+                const data = await response.json();
+                cards = data.data;
+            } else if (this.currentGame === 'onepiece') {
+                // Mock Cards
+                cards = Array(50).fill(0).map((_, i) => ({
+                    name: `One Piece Card ${i+1}`,
+                    rarity: Math.random() > 0.9 ? 'SR' : Math.random() > 0.7 ? 'R' : Math.random() > 0.4 ? 'UC' : 'C',
+                    image: 'https://placehold.co/300x420/111/fff?text=One+Piece+Card'
+                }));
             }
             
-            const data = await response.json();
-            
-            if (data.data && data.data.length > 0) {
-                this.currentCards = this.simulateBooster(data.data);
+            if (cards && cards.length > 0) {
+                this.currentCards = this.simulateBooster(cards);
             }
         } catch (error) {
             console.error('Failed to load cards:', error);
-            this.cardsTrack.innerHTML = '<p class="error">Failed to load cards. Please try again.</p>';
+            this.cardsGrid.innerHTML = '<p class="error">Failed to load cards. Please try again.</p>';
         }
     }
 
     simulateBooster(cards) {
-        // Separate cards by rarity
-        const commons = cards.filter(c => c.rarity === 'common');
-        const uncommons = cards.filter(c => c.rarity === 'uncommon');
-        const rares = cards.filter(c => c.rarity === 'rare');
-        const mythics = cards.filter(c => c.rarity === 'mythic');
-        const lands = cards.filter(c => c.type_line && c.type_line.includes('Basic Land'));
-        
         const booster = [];
         
         // Helper function to get random cards without duplicates
         const getRandomCards = (pool, count) => {
+            if (!pool || pool.length === 0) return [];
             const shuffled = [...pool].sort(() => Math.random() - 0.5);
             return shuffled.slice(0, Math.min(count, shuffled.length));
         };
-        
-        // Build booster based on pack type
-        switch (this.packType) {
-            case 'play':
-                // Play Booster (14 cards)
-                booster.push(...getRandomCards(commons, 6));
-                booster.push(...getRandomCards(uncommons, 3));
-                
-                // Rare/Mythic slot (1/7 chance for mythic)
-                if (Math.random() < (1/7) && mythics.length > 0) {
-                    booster.push(getRandomCards(mythics, 1)[0]);
-                } else if (rares.length > 0) {
-                    booster.push(getRandomCards(rares, 1)[0]);
-                }
-                
-                // Land slot
-                if (lands.length > 0) {
-                    booster.push(getRandomCards(lands, 1)[0]);
-                } else if (commons.length > 0) {
-                    booster.push(getRandomCards(commons, 1)[0]);
-                }
-                
-                // Wildcard slots
-                const wildcardPool = [...commons, ...uncommons];
-                booster.push(...getRandomCards(wildcardPool, 3));
-                break;
-                
-            case 'draft':
-                // Draft Booster (15 cards)
-                booster.push(...getRandomCards(commons, 10));
-                booster.push(...getRandomCards(uncommons, 3));
-                
-                // Rare/Mythic slot (1/8 chance)
-                if (Math.random() < 0.125 && mythics.length > 0) {
-                    booster.push(getRandomCards(mythics, 1)[0]);
-                } else if (rares.length > 0) {
-                    booster.push(getRandomCards(rares, 1)[0]);
-                }
-                
-                // Land
-                if (lands.length > 0) {
-                    booster.push(getRandomCards(lands, 1)[0]);
-                }
-                break;
-                
-            case 'collector':
-                // Collector Booster (15 cards) - premium experience
-                const collectorMythics = getRandomCards(mythics, 2);
-                const collectorRares = getRandomCards(rares, 4);
-                booster.push(...collectorMythics, ...collectorRares);
-                booster.push(...getRandomCards(uncommons, 5));
-                booster.push(...getRandomCards(commons, 4));
-                break;
+
+        if (this.currentGame === 'mtg') {
+            // Separate cards by rarity
+            const commons = cards.filter(c => c.rarity === 'common');
+            const uncommons = cards.filter(c => c.rarity === 'uncommon');
+            const rares = cards.filter(c => c.rarity === 'rare');
+            const mythics = cards.filter(c => c.rarity === 'mythic');
+            const lands = cards.filter(c => c.type_line && c.type_line.includes('Basic Land'));
+            
+            // Build booster based on pack type
+            switch (this.packType) {
+                case 'play':
+                    booster.push(...getRandomCards(commons, 6));
+                    booster.push(...getRandomCards(uncommons, 3));
+                    if (Math.random() < (1/7) && mythics.length > 0) booster.push(getRandomCards(mythics, 1)[0]);
+                    else if (rares.length > 0) booster.push(getRandomCards(rares, 1)[0]);
+                    if (lands.length > 0) booster.push(getRandomCards(lands, 1)[0]);
+                    else if (commons.length > 0) booster.push(getRandomCards(commons, 1)[0]);
+                    const wildcardPool = [...commons, ...uncommons];
+                    booster.push(...getRandomCards(wildcardPool, 3));
+                    break;
+                case 'draft':
+                    booster.push(...getRandomCards(commons, 10));
+                    booster.push(...getRandomCards(uncommons, 3));
+                    if (Math.random() < 0.125 && mythics.length > 0) booster.push(getRandomCards(mythics, 1)[0]);
+                    else if (rares.length > 0) booster.push(getRandomCards(rares, 1)[0]);
+                    if (lands.length > 0) booster.push(getRandomCards(lands, 1)[0]);
+                    break;
+                case 'collector':
+                    const collectorMythics = getRandomCards(mythics, 2);
+                    const collectorRares = getRandomCards(rares, 4);
+                    booster.push(...collectorMythics, ...collectorRares);
+                    booster.push(...getRandomCards(uncommons, 5));
+                    booster.push(...getRandomCards(commons, 4));
+                    break;
+            }
+        } else if (this.currentGame === 'pokemon') {
+            const commons = cards.filter(c => c.rarity === 'Common');
+            const uncommons = cards.filter(c => c.rarity === 'Uncommon');
+            const rares = cards.filter(c => ['Rare', 'Rare Holo', 'Rare Ultra', 'Rare Secret'].includes(c.rarity));
+            
+            booster.push(...getRandomCards(commons, 6));
+            booster.push(...getRandomCards(uncommons, 3));
+            booster.push(...getRandomCards(rares, 1));
+        } else if (this.currentGame === 'yugioh') {
+            // Yu-Gi-Oh rarities are complex, simplifying
+            const commons = cards.filter(c => !c.card_prices[0].cardmarket_price || c.card_prices[0].cardmarket_price < 1);
+            const rares = cards.filter(c => c.card_prices[0].cardmarket_price >= 1);
+            
+            booster.push(...getRandomCards(commons, 8));
+            booster.push(...getRandomCards(rares, 1));
+        } else if (this.currentGame === 'onepiece') {
+            const commons = cards.filter(c => c.rarity === 'C');
+            const uncommons = cards.filter(c => c.rarity === 'UC');
+            const rares = cards.filter(c => ['R', 'SR'].includes(c.rarity));
+            
+            booster.push(...getRandomCards(commons, 8));
+            booster.push(...getRandomCards(uncommons, 3));
+            booster.push(...getRandomCards(rares, 1));
         }
         
         // Filter out undefined and limit to expected count
-        const config = this.packConfigs[this.packType];
-        return booster.filter(c => c !== undefined).slice(0, config.cardCount);
+        const config = this.gameConfigs[this.currentGame].packTypes[this.packType] || Object.values(this.gameConfigs[this.currentGame].packTypes)[0];
+        return booster.filter(c => c !== undefined).slice(0, config.count);
     }
 
     renderCards() {
         this.cardsGrid.innerHTML = '';
         
-        const rarityCounts = { common: 0, uncommon: 0, rare: 0, mythic: 0 };
+        const rarityCounts = {};
         
         this.currentCards.forEach((card, index) => {
-            const imageUri = card.image_uris?.normal || 
-                             card.card_faces?.[0]?.image_uris?.normal || '';
+            let imageUri = '';
+            let rarity = '';
             
-            rarityCounts[card.rarity] = (rarityCounts[card.rarity] || 0) + 1;
+            if (this.currentGame === 'mtg') {
+                imageUri = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || 'https://placehold.co/300x420/222/fff?text=MTG+Card';
+                rarity = card.rarity;
+            } else if (this.currentGame === 'pokemon') {
+                imageUri = card.images?.large || 'https://placehold.co/300x420/0044cc/fff?text=Pokemon+Card';
+                rarity = card.rarity;
+            } else if (this.currentGame === 'yugioh') {
+                imageUri = card.card_images?.[0]?.image_url || 'https://placehold.co/300x420/6b2/fff?text=Yu-Gi-Oh+Card';
+                rarity = card.card_prices?.[0]?.cardmarket_price > 1 ? 'Rare' : 'Common'; // Simplified
+            } else if (this.currentGame === 'onepiece') {
+                imageUri = card.image || 'https://placehold.co/300x420/111/fff?text=One+Piece+Card';
+                rarity = card.rarity;
+            }
+            
+            rarityCounts[rarity] = (rarityCounts[rarity] || 0) + 1;
             
             const cardSlot = document.createElement('div');
-            cardSlot.className = `card-slot ${card.rarity}`;
+            cardSlot.className = `card-slot ${rarity.toLowerCase().replace(' ', '-')}`;
             cardSlot.dataset.index = index;
             
+            // Back Logo Logic
+            let backLogo = 'TCG';
+            if (this.currentGame === 'mtg') backLogo = 'MTG';
+            else if (this.currentGame === 'pokemon') backLogo = 'POKÉMON';
+            else if (this.currentGame === 'yugioh') backLogo = 'YU-GI-OH!';
+            else if (this.currentGame === 'onepiece') backLogo = 'ONE PIECE';
+
             cardSlot.innerHTML = `
                 <div class="card-inner">
                     <div class="card-face card-front">
@@ -646,11 +918,11 @@ class MTGPackOpener {
                     </div>
                     <div class="card-face card-back">
                         <div class="card-back-design">
-                            <span class="mtg-back-logo">MTG</span>
+                            <span class="mtg-back-logo">${backLogo}</span>
                         </div>
                     </div>
                 </div>
-                <div class="rarity-indicator">${card.rarity}</div>
+                <div class="rarity-indicator">${rarity}</div>
             `;
             
             cardSlot.addEventListener('click', () => {
@@ -671,7 +943,8 @@ class MTGPackOpener {
     addCardTiltEffect(cardSlot) {
         const cardInner = cardSlot.querySelector('.card-inner');
         const cardFront = cardSlot.querySelector('.card-front');
-        const isFoil = cardSlot.classList.contains('rare') || cardSlot.classList.contains('mythic');
+        // Simplified foil check - assume rares/mythics/holos are foil
+        const isFoil = cardSlot.className.includes('rare') || cardSlot.className.includes('mythic') || cardSlot.className.includes('holo') || cardSlot.className.includes('sr');
         
         cardSlot.addEventListener('mousemove', (e) => {
             if (!cardSlot.classList.contains('revealed')) return;
@@ -725,20 +998,9 @@ class MTGPackOpener {
 
     updateRarityBreakdown(counts) {
         const items = [];
-        
-        if (counts.mythic > 0) {
-            items.push(`<div class="rarity-item"><div class="rarity-dot mythic"></div><span>${counts.mythic} Mythic</span></div>`);
+        for (const [rarity, count] of Object.entries(counts)) {
+            items.push(`<div class="rarity-item"><div class="rarity-dot ${rarity.toLowerCase().replace(' ', '-')}"></div><span>${count} ${rarity}</span></div>`);
         }
-        if (counts.rare > 0) {
-            items.push(`<div class="rarity-item"><div class="rarity-dot rare"></div><span>${counts.rare} Rare</span></div>`);
-        }
-        if (counts.uncommon > 0) {
-            items.push(`<div class="rarity-item"><div class="rarity-dot uncommon"></div><span>${counts.uncommon} Uncommon</span></div>`);
-        }
-        if (counts.common > 0) {
-            items.push(`<div class="rarity-item"><div class="rarity-dot common"></div><span>${counts.common} Common</span></div>`);
-        }
-        
         this.rarityBreakdown.innerHTML = items.join('');
     }
 
@@ -755,17 +1017,46 @@ class MTGPackOpener {
     }
 
     openModal(card) {
-        const imageUri = card.image_uris?.large || 
-                         card.card_faces?.[0]?.image_uris?.large || 
-                         card.image_uris?.normal || '';
-        
+        let imageUri = '';
+        let name = '';
+        let type = '';
+        let rarity = '';
+        let text = '';
+        let flavor = '';
+
+        if (this.currentGame === 'mtg') {
+            imageUri = card.image_uris?.large || card.card_faces?.[0]?.image_uris?.large || card.image_uris?.normal || '';
+            name = card.name;
+            type = card.type_line;
+            rarity = card.rarity;
+            text = card.oracle_text;
+            flavor = card.flavor_text;
+        } else if (this.currentGame === 'pokemon') {
+            imageUri = card.images.large;
+            name = card.name;
+            type = card.supertype + ' - ' + card.subtypes?.join(', ');
+            rarity = card.rarity;
+            text = card.rules?.join('<br>') || '';
+            flavor = card.flavorText;
+        } else if (this.currentGame === 'yugioh') {
+            imageUri = card.card_images[0].image_url;
+            name = card.name;
+            type = card.type + ' / ' + card.race;
+            rarity = card.card_prices[0].cardmarket_price > 1 ? 'Rare' : 'Common';
+            text = card.desc;
+        } else if (this.currentGame === 'onepiece') {
+            imageUri = card.image;
+            name = card.name;
+            rarity = card.rarity;
+        }
+
         this.modalCardImage.src = imageUri;
         this.modalCardInfo.innerHTML = `
-            <h3>${card.name}</h3>
-            <p>${card.type_line || ''}</p>
-            <p style="color: ${this.getRarityColor(card.rarity)}; font-weight: bold;">${card.rarity?.toUpperCase() || ''}</p>
-            ${card.oracle_text ? `<p style="margin-top: 15px; font-size: 0.95rem; line-height: 1.5;">${card.oracle_text}</p>` : ''}
-            ${card.flavor_text ? `<p style="margin-top: 10px; font-style: italic; color: #888;">"${card.flavor_text}"</p>` : ''}
+            <h3>${name}</h3>
+            <p>${type || ''}</p>
+            <p style="color: ${this.getRarityColor(rarity)}; font-weight: bold;">${rarity?.toUpperCase() || ''}</p>
+            ${text ? `<p style="margin-top: 15px; font-size: 0.95rem; line-height: 1.5;">${text}</p>` : ''}
+            ${flavor ? `<p style="margin-top: 10px; font-style: italic; color: #888;">"${flavor}"</p>` : ''}
         `;
         
         this.cardModal.classList.add('active');
@@ -776,17 +1067,16 @@ class MTGPackOpener {
     }
 
     getRarityColor(rarity) {
-        switch (rarity) {
-            case 'common': return '#c0c0c0';
-            case 'uncommon': return '#a8a8a8';
-            case 'rare': return '#ffd700';
-            case 'mythic': return '#ff6600';
-            default: return '#ffffff';
-        }
+        if (!rarity) return '#ffffff';
+        const r = rarity.toLowerCase();
+        if (r.includes('mythic') || r.includes('secret') || r.includes('sr')) return '#ff6600';
+        if (r.includes('rare') || r.includes('holo') || r.includes('r')) return '#ffd700';
+        if (r.includes('uncommon') || r.includes('uc')) return '#a8a8a8';
+        return '#c0c0c0';
     }
 }
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
-    new MTGPackOpener();
+    new TCGPackOpener();
 });

@@ -122,6 +122,202 @@ body::after {
     font-weight: 300;
 }
 
+/* ==================== */
+/* Game Selection */
+/* ==================== */
+
+.game-selection {
+    padding: 20px;
+}
+
+.game-selection h2 {
+    font-family: 'Cinzel', serif;
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 40px;
+    color: #ffd700;
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px;
+}
+
+.game-card {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-radius: 20px;
+    padding: 40px 30px;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.game-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.game-card:hover::before {
+    opacity: 1;
+}
+
+.game-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* MTG Card */
+.game-card[data-game="mtg"] {
+    border-color: rgba(255, 215, 0, 0.4);
+}
+.game-card[data-game="mtg"]:hover {
+    border-color: #ffd700;
+    box-shadow: 0 20px 40px rgba(255, 215, 0, 0.2);
+}
+
+/* Pokemon Card */
+.game-card[data-game="pokemon"] {
+    border-color: rgba(255, 203, 5, 0.4);
+}
+.game-card[data-game="pokemon"]:hover {
+    border-color: #ffcb05;
+    box-shadow: 0 20px 40px rgba(255, 203, 5, 0.2);
+}
+
+/* Yu-Gi-Oh Card */
+.game-card[data-game="yugioh"] {
+    border-color: rgba(148, 0, 211, 0.4);
+}
+.game-card[data-game="yugioh"]:hover {
+    border-color: #9400d3;
+    box-shadow: 0 20px 40px rgba(148, 0, 211, 0.2);
+}
+
+/* One Piece Card */
+.game-card[data-game="onepiece"] {
+    border-color: rgba(220, 20, 60, 0.4);
+}
+.game-card[data-game="onepiece"]:hover {
+    border-color: #dc143c;
+    box-shadow: 0 20px 40px rgba(220, 20, 60, 0.2);
+}
+
+.game-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.game-logo {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+}
+
+.mtg-logo-text {
+    font-family: 'Cinzel', serif;
+    color: #ffd700;
+}
+
+.pokemon-logo-text {
+    font-family: 'Bangers', cursive;
+    color: #ffcb05;
+    text-shadow: 2px 2px 0 #3d7dca, -1px -1px 0 #3d7dca;
+}
+
+.yugioh-logo-text {
+    font-family: 'Audiowide', cursive;
+    color: #9400d3;
+    text-shadow: 0 0 10px rgba(148, 0, 211, 0.5);
+}
+
+.onepiece-logo-text {
+    font-family: 'Bangers', cursive;
+    color: #dc143c;
+    text-shadow: 2px 2px 0 #000;
+}
+
+.game-description {
+    color: #aaa;
+    font-size: 0.95rem;
+}
+
+/* ==================== */
+/* Game-Specific Themes */
+/* ==================== */
+
+/* Pokemon Theme */
+.app-container.pokemon-theme {
+    --primary-color: #ffcb05;
+    --secondary-color: #3d7dca;
+    --accent-color: #ff0000;
+}
+
+.app-container.pokemon-theme .header h1,
+.app-container.pokemon-theme .set-selection h2 {
+    color: #ffcb05;
+    text-shadow: 2px 2px 0 #3d7dca, 0 0 20px rgba(255, 203, 5, 0.5);
+}
+
+.app-container.pokemon-theme .set-card:hover,
+.app-container.pokemon-theme .pack-type-btn.active {
+    border-color: #ffcb05;
+    box-shadow: 0 0 20px rgba(255, 203, 5, 0.3);
+}
+
+/* Yu-Gi-Oh Theme */
+.app-container.yugioh-theme {
+    --primary-color: #9400d3;
+    --secondary-color: #ffd700;
+    --accent-color: #ff6600;
+}
+
+.app-container.yugioh-theme .header h1,
+.app-container.yugioh-theme .set-selection h2 {
+    color: #9400d3;
+    text-shadow: 0 0 20px rgba(148, 0, 211, 0.5), 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.app-container.yugioh-theme .set-card:hover,
+.app-container.yugioh-theme .pack-type-btn.active {
+    border-color: #9400d3;
+    box-shadow: 0 0 20px rgba(148, 0, 211, 0.3);
+}
+
+/* One Piece Theme */
+.app-container.onepiece-theme {
+    --primary-color: #dc143c;
+    --secondary-color: #ffd700;
+    --accent-color: #000;
+}
+
+.app-container.onepiece-theme .header h1,
+.app-container.onepiece-theme .set-selection h2 {
+    color: #dc143c;
+    text-shadow: 2px 2px 0 #000, 0 0 20px rgba(220, 20, 60, 0.5);
+}
+
+.app-container.onepiece-theme .set-card:hover,
+.app-container.onepiece-theme .pack-type-btn.active {
+    border-color: #dc143c;
+    box-shadow: 0 0 20px rgba(220, 20, 60, 0.3);
+}
+
 /* Set Selection */
 .set-selection {
     padding: 20px;

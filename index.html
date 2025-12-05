@@ -3,21 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTG Pack Opener</title>
+    <title>TCG Pack Opener</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@300;400;700&family=Bangers&family=Audiowide&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
+    <div class="app-container" id="appContainer">
         <!-- Header -->
-        <header class="header">
-            <h1>MTG Pack Opener</h1>
-            <p class="subtitle">Experience the thrill of opening Magic: The Gathering booster packs</p>
+        <header class="header" id="header">
+            <h1 id="headerTitle">TCG Pack Opener</h1>
+            <p class="subtitle" id="headerSubtitle">Choose your game and experience the thrill of opening packs</p>
         </header>
 
+        <!-- Game Selection -->
+        <div class="game-selection" id="gameSelection">
+            <h2>Choose Your Game</h2>
+            <div class="games-grid" id="gamesGrid">
+                <div class="game-card" data-game="mtg">
+                    <div class="game-icon">🎴</div>
+                    <div class="game-logo mtg-logo-text">MAGIC: THE GATHERING</div>
+                    <p class="game-description">Open Play, Draft, or Collector Boosters</p>
+                </div>
+                <div class="game-card" data-game="pokemon">
+                    <div class="game-icon">⚡</div>
+                    <div class="game-logo pokemon-logo-text">POKÉMON TCG</div>
+                    <p class="game-description">Open Booster Packs with 10 cards each</p>
+                </div>
+                <div class="game-card" data-game="yugioh">
+                    <div class="game-icon">🔮</div>
+                    <div class="game-logo yugioh-logo-text">YU-GI-OH!</div>
+                    <p class="game-description">Open Core or Collector Booster Packs</p>
+                </div>
+                <div class="game-card" data-game="onepiece">
+                    <div class="game-icon">☠️</div>
+                    <div class="game-logo onepiece-logo-text">ONE PIECE TCG</div>
+                    <p class="game-description">Open Booster Packs with 12 cards</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Set Selection -->
-        <div class="set-selection" id="setSelection">
-            <h2>Choose Your Set</h2>
+        <div class="set-selection" id="setSelection" style="display: none;">
+            <button class="back-button" id="backToGamesButton">← Back to Games</button>
+            <h2 id="setSelectionTitle">Choose Your Set</h2>
             <div class="search-container">
                 <input type="text" id="setSearch" placeholder="Search for a set..." autocomplete="off">
             </div>
@@ -40,9 +68,7 @@
             
             <!-- Pack Type Selection -->
             <div class="pack-type-selection" id="packTypeSelection">
-                <button class="pack-type-btn active" data-type="play">Play Booster</button>
-                <button class="pack-type-btn" data-type="draft">Draft Booster</button>
-                <button class="pack-type-btn" data-type="collector">Collector Booster</button>
+                <!-- Pack types will be populated by JavaScript based on game -->
             </div>
 
             <div class="pack-container" id="packContainer">
@@ -74,24 +100,24 @@
                                 <div class="pack-set-name" id="packSetName"></div>
                             </div>
                             
-                            <!-- MTG Branding -->
+                            <!-- Game Branding -->
                             <div class="pack-branding">
-                                <div class="mtg-logo">MAGIC: THE GATHERING</div>
-                                <div class="pack-type-label" id="packTypeLabel">PLAY BOOSTER</div>
+                                <div class="game-brand-logo" id="gameBrandLogo">TRADING CARD GAME</div>
+                                <div class="pack-type-label" id="packTypeLabel">BOOSTER PACK</div>
                             </div>
                             
                             <!-- Card count indicator -->
-                            <div class="pack-card-count" id="packCardCount">14 CARDS</div>
+                            <div class="pack-card-count" id="packCardCount">10 CARDS</div>
                             
                             <!-- Shine effect -->
                             <div class="pack-shine"></div>
                         </div>
                         
                         <!-- Pack back face -->
-                        <div class="pack-face pack-back">
+                        <div class="pack-face pack-back" id="packBack">
                             <div class="pack-back-design">
-                                <div class="pack-back-logo">MTG</div>
-                                <div class="pack-back-text">TRADING CARD GAME</div>
+                                <div class="pack-back-logo" id="packBackLogo">TCG</div>
+                                <div class="pack-back-text" id="packBackText">TRADING CARD GAME</div>
                             </div>
                         </div>
                     </div>
